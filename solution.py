@@ -113,10 +113,16 @@ def process_img(img):
     color_select = color_selection(img, 200, 200, 200)
 
     # Draw the region of interest
-    left_bottom = [50, 539]
-    right_bottom = [850, 539]
+    left_bottom = [50, ysize]
+    right_bottom = [xsize - 50, ysize]
+    #left_top = [xsize / 2, ysize / 2 + 40]
+    #right_top = [xsize / 2, ysize / 2 + 40]
     apex = [475, 320]
-    vertices = [left_bottom, right_bottom, apex]
+    vertices = np.array(
+        #[[left_bottom, left_top, right_top, right_bottom]],
+        [[left_bottom, apex, right_bottom]],
+        dtype=np.int32
+    )
     img_wit_region = region_of_interest(color_select, vertices)
 
     plt.imshow(img_wit_region)  # call as plt.imshow(gray, cmap='gray') to show a grayscaled image
