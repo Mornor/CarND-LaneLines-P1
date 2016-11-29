@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
+import os
 import math
 
 
@@ -85,7 +86,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     return line_img
 
 
-def weighted_img(img, initial_img, α=1, β=1., λ=0.):
+def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     """
     `img` is the output of the hough_lines(), An image with lines drawn on it.
     Should be a blank image (all black) with lines drawn on it.
@@ -102,7 +103,8 @@ def weighted_img(img, initial_img, α=1, β=1., λ=0.):
 
 def process_img(img_path):
     # Load the image from img_path and apply a gray filter
-    image = (mpimg.imread(img_path)*255).astype('uint8')
+    original_image = mpimg.imread(img_path)
+    image = (mpimg.imread(img_path) * 255).astype('uint8')
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Get the size of the image
@@ -124,23 +126,26 @@ def process_img(img_path):
     masked_edges = region_of_interest(edges, vertices)
 
     # Apply the Hough transformation
-    rho = 2
-    theta = np.pi/180
-    threshold = 15 # At least 15 points in image space need to be aligned with each segment
-    min_line_length = 40
-    max_line_gap = 20
+    rho = 1
+    theta = np.pi / 180
+    threshold = 40  # At least 15 points in image space need to be aligned with each segment
+    min_line_length = 110
+    max_line_gap = 310
     lines = hough_lines(masked_edges, rho, theta, threshold, min_line_length, max_line_gap)
 
-    """# Create a "color" binary image to combine with line image
-    color_edges = np.dstack((edges, edges, edges))
+    # Add weight
+    output = weighted_img(lines, original_image)
 
-    # Draw the lines on the edge image
-    combo = cv2.addWeighted(color_edges, 0.8, line_image, 1, 0)
-    plt.imshow(combo) """
+    # Return the result
+    return output
 
-    #plt.imshow(edges, cmap='gray')
-    plt.imshow(lines)
+
+def display_img(img):
+    plt.imshow(img)
     plt.show()
 
 
-process_img('test_images/solidWhiteRight.jpg')
+images = os.listdir("test_images/")
+for image in images:
+    output = process_img("test_images/" + image)
+    display_img(output)
