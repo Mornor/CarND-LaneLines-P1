@@ -1,10 +1,11 @@
 # coding=utf-8
-#importing some useful packages
+# importing some useful packages
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 import cv2
 import math
+
 
 def grayscale(img):
     """Applies the Grayscale transform
@@ -12,14 +13,17 @@ def grayscale(img):
     but NOTE: to see the returned image as grayscale
     you should call plt.imshow(gray, cmap='gray')"""
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
+
+
 def canny(img, low_threshold, high_threshold):
     """Applies the Canny transform"""
     return cv2.Canny(img, low_threshold, high_threshold)
 
+
 def gaussian_blur(img, kernel_size):
     """Applies a Gaussian Noise kernel"""
     return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
+
 
 def region_of_interest(img, vertices):
     """
@@ -28,22 +32,23 @@ def region_of_interest(img, vertices):
     Only keeps the region of the image defined by the polygon
     formed from `vertices`. The rest of the image is set to black.
     """
-    #defining a blank mask to start with
-    mask = np.zeros_like(img)   
-    
-    #defining a 3 channel or 1 channel color to fill the mask with depending on the input image
+    # defining a blank mask to start with
+    mask = np.zeros_like(img)
+
+    # defining a 3 channel or 1 channel color to fill the mask with depending on the input image
     if len(img.shape) > 2:
         channel_count = img.shape[2]  # i.e. 3 or 4 depending on your image
         ignore_mask_color = (255,) * channel_count
     else:
         ignore_mask_color = 255
-        
-    #filling pixels inside the polygon defined by "vertices" with the fill color    
+
+    # filling pixels inside the polygon defined by "vertices" with the fill color
     cv2.fillPoly(mask, vertices, ignore_mask_color)
-    
-    #returning the image only where mask pixels are nonzero
+
+    # returning the image only where mask pixels are nonzero
     masked_image = cv2.bitwise_and(img, mask)
     return masked_image
+
 
 def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     """
@@ -63,8 +68,9 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=2):
     this function with the weighted_img() function below
     """
     for line in lines:
-        for x1,y1,x2,y2 in line:
+        for x1, y1, x2, y2 in line:
             cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
 
 def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
     """
@@ -72,12 +78,14 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
         
     Returns an image with hough lines drawn.
     """
-    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
+    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len,
+                            maxLineGap=max_line_gap)
     line_img = np.zeros((*img.shape, 3), dtype=np.uint8)
     draw_lines(line_img, lines)
     return line_img
 
-def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
+
+def weighted_img(img, initial_img, α=1, β=1., λ=0.):
     """
     `img` is the output of the hough_lines(), An image with lines drawn on it.
     Should be a blank image (all black) with lines drawn on it.
@@ -91,42 +99,48 @@ def weighted_img(img, initial_img, α=0.8, β=1., λ=0.):
     """
     return cv2.addWeighted(initial_img, α, img, β, λ)
 
-def color_selection(image, red_threshold, green_threshold, blue_threshold):
-    # Copy the image
-    color_select = np.copy(image)
 
-    # Use a "bitwise OR" to identify pixels below the threshold
-    thresholds = (image[:, :, 0] < red_threshold) \
-                 | (image[:, :, 1] < green_threshold) \
-                 | (image[:, :, 2] < blue_threshold)
+def process_img(img_path):
+    # Load the image from img_path and apply a gray filter
+    image = (mpimg.imread(img_path)*255).astype('uint8')
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Return the image with the color selected
-    color_select[thresholds] = [0, 0, 0]
-    return color_select
-
-def process_img(img):
     # Get the size of the image
-    ysize = img.shape[0]
-    xsize = img.shape[1]
+    y_size = gray.shape[0]
+    x_size = gray.shape[1]
 
-    # Keep only the bright areas
-    color_select = color_selection(img, 200, 200, 200)
+    # Apply a gaussian mask to the image
+    blur_gray = gaussian_blur(gray, 5)
 
-    # Draw the region of interest
-    left_bottom = [50, ysize]
-    right_bottom = [xsize - 50, ysize]
-    #left_top = [xsize / 2, ysize / 2 + 40]
-    #right_top = [xsize / 2, ysize / 2 + 40]
-    apex = [475, 320]
-    vertices = np.array(
-        #[[left_bottom, left_top, right_top, right_bottom]],
-        [[left_bottom, apex, right_bottom]],
-        dtype=np.int32
-    )
-    img_wit_region = region_of_interest(color_select, vertices)
+    # Apply the Canny edge function
+    edges = canny(blur_gray, 50, 150)
 
-    plt.imshow(img_wit_region)  # call as plt.imshow(gray, cmap='gray') to show a grayscaled image
+    # Select the useful region
+    left_bottom = [50, y_size]
+    right_bottom = [x_size - 50, y_size]
+    left_top = [x_size / 2, y_size / 2 + 40]
+    right_top = [x_size / 2, y_size / 2 + 40]
+    vertices = np.array([[left_bottom, left_top, right_top, right_bottom]], dtype=np.int32)
+    masked_edges = region_of_interest(edges, vertices)
+
+    # Apply the Hough transformation
+    rho = 2
+    theta = np.pi/180
+    threshold = 15 # At least 15 points in image space need to be aligned with each segment
+    min_line_length = 40
+    max_line_gap = 20
+    lines = hough_lines(masked_edges, rho, theta, threshold, min_line_length, max_line_gap)
+
+    """# Create a "color" binary image to combine with line image
+    color_edges = np.dstack((edges, edges, edges))
+
+    # Draw the lines on the edge image
+    combo = cv2.addWeighted(color_edges, 0.8, line_image, 1, 0)
+    plt.imshow(combo) """
+
+    #plt.imshow(edges, cmap='gray')
+    plt.imshow(lines)
     plt.show()
 
 
-process_img(mpimg.imread('test_images/solidWhiteRight.jpg'))
+process_img('test_images/solidWhiteRight.jpg')
