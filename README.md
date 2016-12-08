@@ -7,7 +7,7 @@ This is the first project of the <a href="https://www.udacity.com/course/self-dr
 
 In this project I will detect lane lines in images using Python and OpenCV.
 
-**Librairies**
+**Dependencies**
 <ul>
 	<li>OpenCV</li>
 	<li>MoviePy</li>
@@ -15,3 +15,19 @@ In this project I will detect lane lines in images using Python and OpenCV.
 	<li>Matplotlib</li>
 </ul>
 
+**Installation**
+
+There is 2 possibilities to run the project:
+<ul>
+	<li>Install all the dependencies natively</li>
+	<li>Run the command in a Conda environment</li>
+</ul>
+
+To create the Conda environment, first install <a href="https://www.continuum.io/downloads">Ananconda</a>, then create the environemnt using `environment.yml`: <br />
+```
+conda env create -f environment.yml
+```
+Then, activate it: 
+```
+source activate python3
+```
